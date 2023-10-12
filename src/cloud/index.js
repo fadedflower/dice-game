@@ -111,6 +111,15 @@ const db = cloud.database({
 const mdb = db.collection('match_db')
 
 const MatchDB = {
+    /**
+     * 当前比赛ID
+     * @type {number}
+     */
+    _currentMatchId: null,
+    /**
+     * 寻找已有的比赛或创建新比赛
+     * @returns {string} 房间ID
+     */
     async findMatch() {
         let userRecord = await UserDB.getUserInfo()
         let roomId = await cloud.callFunction({
@@ -121,10 +130,23 @@ const MatchDB = {
                 avatar: userRecord.avatar
             }
         })
+        this._currentMatchId = roomId
         return roomId
     },
-    async watchMatchDescriptors() {
-        
+    /**
+     * 监听比赛记录变化
+     * @param {Function} cb 回调函数
+     * @returns {DB.Document.IWatcher} 监听对象
+     */
+    async watchMatch(cb) {
+        const watcher = mdb.where({
+            _id: this._currentMatchId
+        }).watch({
+            onChange: snapshot => {
+                cb(snapshot.docs[0])
+            }
+        })
+        return watcher
     }
 }
 
